@@ -231,3 +231,28 @@ spec:
       port: 80
       targetPort: 8080
       nodePort: 30080
+---
+# Kurze Adresse fuer den Fernseher: http://10.10.1.4/ statt :30080.
+#
+# Auffangregel mit niedrigster Prioritaet. Traefik nimmt Host-Regeln zuerst,
+# waf.benz-sw.de und vault.benz-sw.de bleiben also unberuehrt; hier landet
+# nur, was sonst niemand beantwortet (bisher: eine 404-Seite).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kinoraum
+  namespace: kinoraum
+  annotations:
+    traefik.ingress.kubernetes.io/router.priority: "1"
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kinoraum
+                port:
+                  number: 80
