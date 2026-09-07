@@ -154,6 +154,7 @@
 
     if (code === Keys.RED) { ev.preventDefault(); App.go("#/search"); return; }
     if (code === Keys.GREEN) { ev.preventDefault(); App.go("#/settings"); return; }
+    if (code === Keys.BLUE) { ev.preventDefault(); App.go("#/open"); return; }
     if (code === Keys.YELLOW) {
       ev.preventDefault();
       App.toast("Bestand wird neu geladen ...");
@@ -174,6 +175,7 @@
 
     SCREENS.home = global.ScreenHome;
     SCREENS.search = global.ScreenSearch;
+    SCREENS.open = global.ScreenOpen;
     SCREENS.settings = global.ScreenSettings;
     SCREENS.detail = global.ScreenDetail;
 

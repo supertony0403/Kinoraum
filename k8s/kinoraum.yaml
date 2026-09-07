@@ -1,0 +1,158 @@
+# Kinoraum als Webseite im k3s-Cluster.
+#
+# Zweck: den Fernseher ohne Developer Mode und ohne IPK erreichen - im
+# LG-Browser einfach die Adresse aufrufen.
+#
+# Kein eigenes Container-Abbild: ein initContainer holt den Stand aus dem
+# oeffentlichen GitHub-Repo, nginx liefert ihn aus. Aktualisieren heisst
+# damit schlicht:  kubectl -n kinoraum rollout restart deploy/kinoraum
+#
+# Erreichbar ueber einen festen NodePort statt ueber einen Hostnamen: der
+# Fernseher hat weder Ziti-Client noch DNS fuer *.benz-sw.de, eine nackte
+# IP mit Port funktioniert dagegen immer.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kinoraum
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kinoraum-nginx
+  namespace: kinoraum
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      server_name _;
+      root /web;
+      index index.html;
+
+      # Die App haelt ihren Zustand im Adressteil hinter #, der Server sieht
+      # davon nichts. Alles Unbekannte auf index.html zurueckfallen lassen.
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      # Bilder und Skripte duerfen zwischengespeichert werden, die Startseite
+      # nicht - sonst zeigt der Fernseher nach einem Update den alten Stand.
+      location ~* \.(jpg|jpeg|png|gif|svg|woff2?)$ {
+        expires 7d;
+        add_header Cache-Control "public";
+      }
+      location ~* \.(js|css)$ {
+        expires 1h;
+        add_header Cache-Control "public";
+      }
+      location = /index.html {
+        add_header Cache-Control "no-store";
+      }
+
+      # Kleine Auskunftsseite fuer Health-Checks
+      location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+      }
+
+      gzip on;
+      gzip_types text/css application/javascript application/json image/svg+xml;
+      gzip_min_length 1024;
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kinoraum
+  namespace: kinoraum
+  labels:
+    app: kinoraum
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kinoraum
+  template:
+    metadata:
+      labels:
+        app: kinoraum
+      annotations:
+        # Erzwingt beim rollout restart einen frischen Clone.
+        kinoraum/source: "github.com/supertony0403/Kinoraum"
+    spec:
+      initContainers:
+        - name: fetch
+          image: alpine/git:2.45.2
+          args:
+            - clone
+            - --depth=1
+            - --single-branch
+            - --branch=master
+            - https://github.com/supertony0403/Kinoraum.git
+            - /web
+          volumeMounts:
+            - name: web
+              mountPath: /web
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 500m, memory: 256Mi }
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: web
+              mountPath: /web
+              readOnly: true
+            - name: conf
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+            # nginx:alpine will als Nicht-Root in diese Pfade schreiben
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: run
+              mountPath: /var/run
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits:   { cpu: 300m, memory: 128Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101          # nginx-Benutzer im alpine-Abbild
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: web
+          emptyDir: {}
+        - name: conf
+          configMap:
+            name: kinoraum-nginx
+        - name: cache
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kinoraum
+  namespace: kinoraum
+spec:
+  type: NodePort
+  selector:
+    app: kinoraum
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      nodePort: 30080

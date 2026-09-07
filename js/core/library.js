@@ -8,7 +8,7 @@
   var U = global.U;
   var Store = global.Store;
 
-  var SOURCES = [global.SourceDemo, global.SourceStreams, global.SourceJellyfin];
+  var SOURCES = [global.SourceLinks, global.SourceDemo, global.SourceStreams, global.SourceJellyfin];
 
   var items = [];
   var byId = {};

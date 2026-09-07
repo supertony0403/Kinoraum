@@ -15,6 +15,7 @@
     <nav class="chrome__nav" data-nav-section="chrome">
       <button class="tab" data-focusable data-route="#/home">Start</button>
       <button class="tab" data-focusable data-route="#/search">Suche</button>
+      <button class="tab" data-focusable data-route="#/open">Adresse</button>
       <button class="tab" data-focusable data-route="#/settings">Einstellungen</button>
     </nav>
     <div class="chrome__meta"><span id="clock" class="clock"></span></div>
@@ -49,6 +50,11 @@
       </div>
       <p class="hint" id="search-hint">Mit der Fernbedienung tippen: OK auf dem Feld oeffnet die Bildschirmtastatur.</p>
       <div class="grid" id="search-results" data-nav-section="search-results"></div>
+    </section>
+
+    <section class="screen screen--pad" id="screen-open" hidden>
+      <h2 class="screen__title">Adresse öffnen</h2>
+      <div class="settings" id="open-body"></div>
     </section>
 
     <section class="screen screen--pad" id="screen-settings" hidden>
@@ -105,11 +111,13 @@
 <script src="js/sources/demo.js"></script>
 <script src="js/sources/streams.js"></script>
 <script src="js/sources/jellyfin.js"></script>
+<script src="js/sources/links.js"></script>
 <script src="js/core/card.js"></script>
 <script src="js/core/library.js"></script>
 <script src="js/screens/home.js"></script>
 <script src="js/screens/detail.js"></script>
 <script src="js/screens/search.js"></script>
+<script src="js/screens/open.js"></script>
 <script src="js/screens/settings.js"></script>
 <script src="js/screens/player.js"></script>
 <script src="js/app.js"></script>

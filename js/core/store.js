@@ -16,7 +16,8 @@
     },
     tmdb: { apiKey: "" },
     prefs: { resume: true, reportToServer: true },
-    progress: {}
+    progress: {},
+    links: []          // selbst eingetragene Adressen, siehe sources/links.js
   };
 
   function clone(v) { return JSON.parse(JSON.stringify(v)); }
@@ -120,6 +121,41 @@
         })
         .sort(function (a, b) { return b.at - a.at; });
     },
+
+    /* ------------------------------------------------------ Eigene Adressen */
+
+    links: function () { return state.links.slice(); },
+
+    /** Adresse merken. Gleiche Adresse zweimal ergibt keinen zweiten Eintrag,
+        der Titel wird dann nur aufgefrischt. Neueste stehen vorn. */
+    addLink: function (url, title) {
+      url = String(url || "").trim();
+      if (!url) { return null; }
+
+      var existing = null, i;
+      for (i = 0; i < state.links.length; i++) {
+        if (state.links[i].url === url) { existing = state.links[i]; break; }
+      }
+      if (existing) {
+        if (title) { existing.title = title; }
+        save();
+        return existing;
+      }
+
+      var entry = { url: url, title: title || "", at: Store.stamp() };
+      state.links.unshift(entry);
+      if (state.links.length > 200) { state.links.length = 200; }
+      save();
+      return entry;
+    },
+
+    removeLink: function (url) {
+      state.links = state.links.filter(function (l) { return l.url !== url; });
+      save();
+    },
+
+    /* Date.now() gekapselt, damit es nur an einer Stelle steht. */
+    stamp: function () { return new Date().getTime(); },
 
     reset: function () {
       state = clone(DEFAULTS);
