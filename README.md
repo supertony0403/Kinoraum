@@ -142,7 +142,19 @@ ares-setup-device
 Fehlt `ares-*` im System, legt `scripts/build.sh` die Werkzeuge beim ersten
 Lauf lokal ins Projekt (`npm install @webosose/ares-cli`, ohne Systemeingriff).
 
-### Jedes Mal
+### In einem Schritt
+
+Wenn Developer Mode am Fernseher läuft, macht ein Befehl den Rest — eintragen,
+Schlüssel holen, bauen, installieren, starten:
+
+```bash
+scripts/tv-install.sh <IP-des-Fernsehers> <Passphrase>
+```
+
+Beides zeigt die Developer-Mode-App am Fernseher an. Derselbe Befehl schiebt
+später auch neue Fassungen nach.
+
+### Oder einzeln
 
 ```bash
 scripts/build.sh        # erzeugt dist/de.benzsw.kinoraum_1.0.0_all.ipk
