@@ -1,0 +1,710 @@
+/* =========================================================================
+   Kinoraum - Oberflaeche fuer LG webOS
+   Entwurfsregeln fuer den Fernseher:
+   - Alles ist auf 3 m Abstand lesbar: Grundschrift 26 px, Titel ab 44 px.
+   - Bewegt werden nur transform und opacity. Fernseher-GPUs brechen bei
+     animierten Schatten und Filtern ein.
+   - Kein Zustand haengt an :hover. Der Fokus ist die einzige Wahrheit.
+   - Aussen 72 px Rand gegen Overscan aelterer Panels.
+   ========================================================================= */
+
+:root {
+  --bg:        #07080c;
+  --bg-2:      #0b0d14;
+  --surface:   #151824;
+  --surface-2: #1e2230;
+  --line:      rgba(255, 255, 255, 0.10);
+  --line-2:    rgba(255, 255, 255, 0.18);
+
+  --txt:       #f2f4f8;
+  --txt-2:     #a4adc2;
+  --txt-3:     #737c94;
+
+  --hot:       #ff3d5a;
+  --warm:      #ff9d3d;
+  --ok:        #35d07f;
+
+  --safe:      72px;
+  --gap:       24px;
+  --card-w:    190px;
+  --card-h:    285px;
+  --r:         14px;
+
+  --font: "LG Smart UI", "Museo Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--txt);
+  font-family: var(--font);
+  font-size: 26px;
+  line-height: 1.45;
+  /* Fernseher rendern Text sonst zu duenn */
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  outline: none;         /* eigener Fokusring, siehe .is-focused */
+}
+
+img { border: 0; }
+
+.app { position: relative; width: 100%; height: 100%; }
+
+[hidden] { display: none !important; }
+
+/* ---------------------------------------------------------------- Kopfzeile */
+
+.chrome {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 128px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--safe);
+  z-index: 40;
+  background: linear-gradient(to bottom, rgba(7, 8, 12, 0.96) 0%, rgba(7, 8, 12, 0.72) 55%, rgba(7, 8, 12, 0) 100%);
+  transition: opacity 200ms ease;
+}
+.chrome--off { opacity: 0; pointer-events: none; }
+
+.chrome__brand { display: flex; align-items: center; gap: 16px; }
+
+.brand__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px; height: 52px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--hot), var(--warm));
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+}
+.brand__word { font-size: 30px; font-weight: 600; letter-spacing: 0.01em; }
+
+.chrome__nav { display: flex; gap: 8px; margin-left: 72px; }
+
+.tab {
+  position: relative;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 26px;
+  color: var(--txt-2);
+  transition: color 140ms ease, background-color 140ms ease;
+}
+.tab--on { color: var(--txt); background: rgba(255, 255, 255, 0.10); }
+
+.chrome__meta { margin-left: auto; }
+.clock { font-size: 26px; color: var(--txt-2); font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- Buehnen */
+
+.screens { position: absolute; inset: 0; }
+
+.screen {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+.screen::-webkit-scrollbar { display: none; }
+
+.screen--pad { padding: 176px var(--safe) 96px; }
+
+.screen__title { margin: 0 0 40px; font-size: 52px; font-weight: 600; }
+
+/* ---------------------------------------------------------------- Buehne oben */
+
+.hero { position: relative; height: 590px; }
+
+.hero__art { position: absolute; inset: 0; overflow: hidden; }
+.hero__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 22%;
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+.hero__art img.is-on { opacity: 1; }
+
+/* Zwei Verlaeufe: links Text-Lesbarkeit, unten Uebergang in die Reihen. */
+.hero--noart::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 78% 18%, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 62%);
+}
+
+.hero__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, var(--bg) 0%, rgba(7, 8, 12, 0.94) 30%, rgba(7, 8, 12, 0.35) 62%, rgba(7, 8, 12, 0.05) 100%),
+    linear-gradient(to top, var(--bg) 2%, rgba(7, 8, 12, 0.25) 40%, rgba(7, 8, 12, 0.55) 100%);
+}
+
+.hero__body {
+  position: absolute;
+  left: var(--safe);
+  bottom: 72px;
+  width: 940px;
+}
+
+.hero__kicker {
+  margin: 0 0 14px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--warm);
+}
+
+.hero__title {
+  margin: 0 0 18px;
+  font-size: 72px;
+  line-height: 1.04;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.hero__facts { margin: 0 0 20px; font-size: 25px; color: var(--txt-2); }
+.hero__facts b { color: var(--ok); font-weight: 600; }
+
+.hero__text {
+  margin: 0 0 36px;
+  font-size: 27px;
+  line-height: 1.5;
+  color: var(--txt-2);
+  /* drei Zeilen, danach abschneiden - laengere Texte stehen in den Details */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hero__acts { display: flex; gap: 20px; }
+
+/* ---------------------------------------------------------------- Schaltflaechen */
+
+.btn {
+  position: relative;
+  padding: 18px 40px;
+  border-radius: 10px;
+  font-size: 27px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.13);
+  color: var(--txt);
+  transition: transform 150ms ease, background-color 150ms ease;
+}
+.btn--primary { background: linear-gradient(135deg, var(--hot), var(--warm)); color: #fff; }
+.btn--ghost   { background: transparent; box-shadow: inset 0 0 0 2px var(--line-2); }
+.btn--danger  { background: rgba(255, 61, 90, 0.18); color: #ff9aab; }
+
+/* ---------------------------------------------------------------- Fokus
+   Ein einziger Mechanismus fuer alle fokussierbaren Elemente: Ring ueber
+   ::after, damit kein Layout entsteht und der Rahmen nicht mitskaliert. */
+
+[data-focusable] { position: relative; }
+
+[data-focusable]::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 4px var(--warm);
+  opacity: 0;
+  transition: opacity 130ms ease;
+  pointer-events: none;
+}
+.is-focused::after { opacity: 1; }
+
+.btn.is-focused,
+.tab.is-focused { transform: scale(1.05); background: rgba(255, 255, 255, 0.24); }
+.btn--primary.is-focused { background: linear-gradient(135deg, var(--warm), var(--hot)); }
+
+/* ---------------------------------------------------------------- Reihen */
+
+.rows { padding: 8px 0 120px; position: relative; z-index: 2; }
+
+.row { margin-bottom: 56px; }
+
+.row__head {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  padding: 0 var(--safe);
+  margin-bottom: 14px;
+}
+.row__title { font-size: 34px; font-weight: 600; margin: 0; }
+.row__note  { font-size: 22px; color: var(--txt-3); }
+
+/* Die Spur wird per transform verschoben, nicht per scrollLeft:
+   das laeuft auf schwachen Panels deutlich ruhiger. */
+.row__vp { overflow: hidden; padding: 16px 0; }
+.row__track {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap);
+  padding: 0 var(--safe);
+  transition: transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+
+/* ---------------------------------------------------------------- Karte */
+
+.card {
+  flex: 0 0 var(--card-w);
+  width: var(--card-w);
+  transition: transform 170ms ease;
+  text-align: left;
+}
+.card.is-focused { transform: scale(1.09); z-index: 3; }
+.card::after { inset: -6px -6px 86px; }   /* Ring nur um das Bild, nicht um die Bildunterschrift */
+
+.card__art {
+  position: relative;
+  width: 100%;
+  height: var(--card-h);
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--surface);
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Ersatzflaeche, wenn kein Bild vorliegt: Farbverlauf aus dem Titel abgeleitet
+   (siehe util.tintFor) plus grosser Titel - sieht gewollt aus statt kaputt. */
+.card__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 20px;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.94);
+}
+.card__fallback span {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+.card__img.is-on { opacity: 1; }
+
+.card__badge {
+  position: absolute;
+  top: 12px; left: 12px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: rgba(7, 8, 12, 0.82);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--txt);
+}
+
+/* Fortschrittsbalken der angefangenen Titel */
+.card__prog {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.55);
+}
+.card__prog i {
+  display: block;
+  height: 100%;
+  background: var(--hot);
+}
+
+.card__cap {
+  display: block;        /* span waere inline, dann greift height nicht */
+  padding: 10px 4px 0;
+  height: 92px;          /* zwei Titelzeilen + Zusatz, fuer alle gleich */
+  overflow: hidden;
+}
+.card__name {
+  font-size: 24px;
+  line-height: 1.25;
+  color: var(--txt);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card__sub {
+  display: block;
+  font-size: 21px;
+  color: var(--txt-3);
+  margin-top: 4px;
+  /* Lange Angaben duerfen die Kachelhoehe nicht veraendern. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------- Raster (Suche) */
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px var(--gap);
+}
+.grid .card { margin: 0; }
+
+/* ---------------------------------------------------------------- Suche */
+
+.search { display: flex; gap: 20px; align-items: center; margin-bottom: 18px; }
+
+.search__field {
+  flex: 1;
+  max-width: 1100px;
+  padding: 20px 28px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--line);
+  font-size: 30px;
+  color: var(--txt);
+}
+.search__field::placeholder { color: var(--txt-3); }
+.search__field.is-focused { box-shadow: inset 0 0 0 2px var(--line-2); }
+
+.hint { font-size: 23px; color: var(--txt-3); margin: 0 0 44px; }
+
+/* ---------------------------------------------------------------- Einstellungen */
+
+.settings { max-width: 1360px; }
+
+.set-group { margin-bottom: 56px; }
+.set-group__title {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--warm);
+  margin: 0 0 8px;
+}
+.set-group__note { font-size: 23px; color: var(--txt-3); margin: 0 0 24px; max-width: 1000px; }
+
+.field { margin-bottom: 22px; }
+.field__label { display: block; font-size: 24px; color: var(--txt-2); margin-bottom: 10px; }
+.field__input {
+  width: 100%;
+  padding: 18px 24px;
+  border-radius: 11px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--line);
+  font-size: 27px;
+  color: var(--txt);
+}
+.field__input.is-focused { box-shadow: inset 0 0 0 2px var(--line-2); }
+.field__note { font-size: 21px; color: var(--txt-3); margin-top: 8px; }
+
+.set-acts { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 12px; }
+
+.status {
+  margin-top: 22px;
+  padding: 18px 24px;
+  border-radius: 11px;
+  font-size: 24px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--line);
+  color: var(--txt-2);
+}
+.status--ok  { color: #9df0c3; box-shadow: inset 0 0 0 2px rgba(53, 208, 127, 0.45); }
+.status--bad { color: #ffb0bd; box-shadow: inset 0 0 0 2px rgba(255, 61, 90, 0.45); }
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  width: 100%;
+  /* Luft fuer den Fokusring, der 6 px ueber die Kante hinausgeht. */
+  margin-bottom: 24px;
+  padding: 20px 26px;
+  border-radius: 11px;
+  background: var(--surface);
+  text-align: left;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+.toggle.is-focused { background: var(--surface-2); transform: scale(1.01); }
+.toggle__label { font-size: 26px; }
+.toggle__hint  { font-size: 21px; color: var(--txt-3); margin-top: 4px; }
+.toggle__state { font-size: 24px; font-weight: 600; color: var(--txt-3); white-space: nowrap; }
+.toggle__state--on { color: var(--ok); }
+
+/* ---------------------------------------------------------------- Detailblatt */
+
+.screen--sheet { background: rgba(7, 8, 12, 0.97); z-index: 45; }
+
+.detail { position: relative; min-height: 100%; }
+
+.detail__art { position: absolute; top: 0; left: 0; right: 0; height: 760px; overflow: hidden; }
+.detail__art img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 25%; opacity: 0.5; }
+.detail__art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, var(--bg) 8%, rgba(7, 8, 12, 0.55) 55%, rgba(7, 8, 12, 0.75) 100%);
+}
+
+.detail__body {
+  position: relative;
+  padding: 300px var(--safe) 110px;
+  max-width: 1340px;
+}
+.detail__title { font-size: 76px; font-weight: 700; margin: 0 0 18px; line-height: 1.05; letter-spacing: -0.02em; }
+.detail__facts { font-size: 25px; color: var(--txt-2); margin: 0 0 30px; }
+.detail__text  { font-size: 28px; line-height: 1.55; color: var(--txt-2); margin: 0 0 40px; }
+
+.detail__acts { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 44px; }
+
+.meta { display: flex; flex-wrap: wrap; gap: 14px 56px; font-size: 23px; color: var(--txt-3); }
+.meta b { display: block; color: var(--txt-2); font-weight: 600; font-size: 21px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+
+/* ---------------------------------------------------------------- Wiedergabe */
+
+.player { position: fixed; inset: 0; background: #000; z-index: 60; }
+
+.player__video { width: 100%; height: 100%; background: #000; display: block; }
+
+.player__scrim {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.28) 26%, rgba(0, 0, 0, 0) 46%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0) 24%);
+}
+.player.is-ui .player__scrim { opacity: 1; }
+
+.player__head {
+  position: absolute;
+  top: 56px; left: var(--safe); right: var(--safe);
+  opacity: 0;
+  transform: translateY(-14px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.player.is-ui .player__head { opacity: 1; transform: none; }
+.player__title { font-size: 46px; font-weight: 600; margin: 0; }
+.player__sub   { font-size: 24px; color: var(--txt-2); margin: 6px 0 0; }
+
+.player__ui {
+  position: absolute;
+  left: var(--safe); right: var(--safe); bottom: 64px;
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 220ms ease, transform 220ms ease;
+  pointer-events: none;
+}
+.player.is-ui .player__ui { opacity: 1; transform: none; pointer-events: auto; }
+
+.bar { margin-bottom: 26px; }
+.bar__track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  transition: height 150ms ease;
+}
+.bar.is-focused .bar__track { height: 14px; border-radius: 7px; }
+.bar__buf, .bar__fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  border-radius: inherit;
+}
+.bar__buf  { background: rgba(255, 255, 255, 0.26); width: 0; }
+.bar__fill { background: linear-gradient(90deg, var(--hot), var(--warm)); width: 0; }
+.bar__knob {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 26px; height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.bar.is-focused .bar__knob { opacity: 1; }
+.bar::after { inset: -14px -10px; border-radius: 14px; }
+
+.bar__times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  font-size: 24px;
+  color: var(--txt-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.ctrls { display: flex; align-items: center; gap: 18px; }
+
+.ico {
+  min-width: 78px;
+  height: 78px;
+  padding: 0 22px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 28px;
+  font-weight: 600;
+  transition: transform 150ms ease, background-color 150ms ease;
+}
+.ico.is-focused { transform: scale(1.08); background: rgba(255, 255, 255, 0.30); }
+.ico--big { min-width: 96px; height: 96px; font-size: 36px; }
+.ico--txt { font-size: 25px; }
+#p-stop { margin-left: auto; }
+
+.player__spinner {
+  position: absolute;
+  top: 50%; left: 50%;
+  margin: -34px 0 0 -34px;
+  z-index: 5;
+}
+.player__spinner i,
+.boot i {
+  display: block;
+  width: 68px; height: 68px;
+  border-radius: 50%;
+  border: 6px solid rgba(255, 255, 255, 0.18);
+  border-top-color: var(--warm);
+  animation: spin 900ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.seekhint {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 24px 44px;
+  border-radius: 14px;
+  background: rgba(7, 8, 12, 0.86);
+  font-size: 44px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- Auswahlblatt */
+
+.panel {
+  position: absolute;
+  right: var(--safe);
+  bottom: 260px;
+  width: 560px;
+  max-height: 620px;
+  overflow-y: auto;
+  padding: 28px;
+  border-radius: 16px;
+  background: rgba(13, 15, 22, 0.97);
+  box-shadow: inset 0 0 0 2px var(--line);
+  z-index: 6;
+  scrollbar-width: none;
+}
+.panel::-webkit-scrollbar { display: none; }
+.panel__title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--warm);
+  margin: 0 0 16px;
+}
+.panel__title + .panel__title { margin-top: 30px; }
+.opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  padding: 15px 20px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 25px;
+  color: var(--txt-2);
+  transition: background-color 140ms ease;
+}
+.opt.is-focused { background: rgba(255, 255, 255, 0.16); color: var(--txt); }
+.opt--on { color: var(--txt); }
+.opt--on::before { content: "\2022"; color: var(--warm); margin-right: 4px; font-size: 30px; line-height: 1; }
+
+/* ---------------------------------------------------------------- Meldungen */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  padding: 20px 40px;
+  border-radius: 12px;
+  background: rgba(13, 15, 22, 0.96);
+  box-shadow: inset 0 0 0 2px var(--line);
+  font-size: 26px;
+  z-index: 90;
+  max-width: 1200px;
+  text-align: center;
+}
+
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: var(--bg);
+  font-size: 26px;
+  color: var(--txt-2);
+  transition: opacity 320ms ease;
+}
+.boot--off { opacity: 0; pointer-events: none; }
+
+.empty {
+  padding: 80px 0;
+  font-size: 28px;
+  color: var(--txt-3);
+  max-width: 1100px;
+}
+.empty b { display: block; color: var(--txt); font-size: 34px; font-weight: 600; margin-bottom: 14px; }
+
+/* ---------------------------------------------------------------- kleinere Panels
+   Einstiegsmodelle und 720p-Geraete melden eine schmalere Flaeche. */
+
+@media (max-width: 1400px) {
+  :root { --safe: 48px; --card-w: 176px; --card-h: 264px; }
+  html, body { font-size: 22px; }
+  .hero { height: 500px; }
+  .hero__title { font-size: 56px; }
+  .detail__title { font-size: 58px; }
+  .chrome { height: 104px; }
+}

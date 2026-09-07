@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920,initial-scale=1">
+<title>Kinoraum</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<div id="app" class="app">
+
+  <header class="chrome" id="chrome">
+    <div class="chrome__brand"><span class="brand__mark">K</span><span class="brand__word">Kinoraum</span></div>
+    <nav class="chrome__nav" data-nav-section="chrome">
+      <button class="tab" data-focusable data-route="#/home">Start</button>
+      <button class="tab" data-focusable data-route="#/search">Suche</button>
+      <button class="tab" data-focusable data-route="#/settings">Einstellungen</button>
+    </nav>
+    <div class="chrome__meta"><span id="clock" class="clock"></span></div>
+  </header>
+
+  <main id="screens" class="screens">
+
+    <section class="screen" id="screen-home" hidden>
+      <div class="hero" id="hero">
+        <div class="hero__art"><img id="hero-art" alt=""></div>
+        <div class="hero__shade"></div>
+        <div class="hero__body">
+          <p class="hero__kicker" id="hero-kicker"></p>
+          <h1 class="hero__title" id="hero-title"></h1>
+          <p class="hero__facts" id="hero-facts"></p>
+          <p class="hero__text" id="hero-text"></p>
+          <div class="hero__acts" data-nav-section="hero">
+            <button class="btn btn--primary" id="hero-play" data-focusable>Abspielen</button>
+            <button class="btn" id="hero-info" data-focusable>Details</button>
+          </div>
+        </div>
+      </div>
+      <div class="rows" id="rows"></div>
+    </section>
+
+    <section class="screen screen--pad" id="screen-search" hidden>
+      <h2 class="screen__title">Suche</h2>
+      <div class="search" data-nav-section="search-input">
+        <input id="search-input" class="search__field" type="text" data-focusable
+               placeholder="Titel eingeben" autocomplete="off" spellcheck="false">
+        <button class="btn" id="search-clear" data-focusable>Leeren</button>
+      </div>
+      <p class="hint" id="search-hint">Mit der Fernbedienung tippen: OK auf dem Feld oeffnet die Bildschirmtastatur.</p>
+      <div class="grid" id="search-results" data-nav-section="search-results"></div>
+    </section>
+
+    <section class="screen screen--pad" id="screen-settings" hidden>
+      <h2 class="screen__title">Einstellungen</h2>
+      <div class="settings" id="settings-body"></div>
+    </section>
+
+    <section class="screen screen--sheet" id="screen-detail" hidden>
+      <div class="detail" id="detail-body"></div>
+    </section>
+
+  </main>
+
+  <section class="player" id="screen-player" hidden>
+    <video id="video" class="player__video" playsinline preload="metadata"></video>
+    <div class="player__scrim" id="player-scrim"></div>
+
+    <div class="player__spinner" id="player-spinner" hidden><i></i></div>
+
+    <div class="player__head" id="player-head">
+      <h2 class="player__title" id="player-title"></h2>
+      <p class="player__sub" id="player-sub"></p>
+    </div>
+
+    <div class="player__ui" id="player-ui" data-nav-section="player">
+      <div class="bar" id="bar">
+        <div class="bar__track"><div class="bar__buf" id="bar-buf"></div><div class="bar__fill" id="bar-fill"></div><div class="bar__knob" id="bar-knob"></div></div>
+        <div class="bar__times"><span id="t-cur">0:00</span><span id="t-dur">0:00</span></div>
+      </div>
+      <div class="ctrls">
+        <button class="ico" id="p-back10"  data-focusable title="10 s zurueck">&#8630;10</button>
+        <button class="ico ico--big" id="p-toggle" data-focusable title="Abspielen / Pause">&#9654;</button>
+        <button class="ico" id="p-fwd10"   data-focusable title="10 s vor">10&#8631;</button>
+        <button class="ico ico--txt" id="p-track" data-focusable title="Tonspur / Untertitel">Spuren</button>
+        <button class="ico ico--txt" id="p-quality" data-focusable title="Qualitaet">Auto</button>
+        <button class="ico ico--txt" id="p-stop"  data-focusable title="Beenden">Beenden</button>
+      </div>
+    </div>
+
+    <div class="seekhint" id="seekhint" hidden></div>
+    <div class="panel" id="panel" hidden data-nav-section="panel"></div>
+  </section>
+
+  <div class="toast" id="toast" hidden></div>
+  <div class="boot" id="boot"><i></i><span>Kinoraum startet</span></div>
+
+</div>
+
+<script src="js/lib/hls.min.js"></script>
+<script src="js/core/util.js"></script>
+<script src="js/core/keys.js"></script>
+<script src="js/core/nav.js"></script>
+<script src="js/core/store.js"></script>
+<script src="js/sources/demo.js"></script>
+<script src="js/sources/streams.js"></script>
+<script src="js/sources/jellyfin.js"></script>
+<script src="js/core/card.js"></script>
+<script src="js/core/library.js"></script>
+<script src="js/screens/home.js"></script>
+<script src="js/screens/detail.js"></script>
+<script src="js/screens/search.js"></script>
+<script src="js/screens/settings.js"></script>
+<script src="js/screens/player.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

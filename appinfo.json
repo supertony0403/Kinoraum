@@ -1,0 +1,19 @@
+{
+  "id": "de.benzsw.kinoraum",
+  "version": "1.0.0",
+  "vendor": "Anthony Benz",
+  "type": "web",
+  "main": "index.html",
+  "title": "Kinoraum",
+  "appDescription": "Mediathek fuer eigene Quellen: Jellyfin, eigene Stream-Liste, gemeinfreie Filme.",
+  "icon": "assets/icon.png",
+  "largeIcon": "assets/largeIcon.png",
+  "splashBackground": "assets/splash.png",
+  "bgColor": "#07080c",
+  "iconColor": "#ff3d5a",
+  "disableBackHistoryAPI": true,
+  "supportPortraitMode": false,
+  "handlesRelaunch": true,
+  "requiredMemory": 200,
+  "resolution": "1920x1080"
+}
