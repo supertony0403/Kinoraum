@@ -19,7 +19,16 @@ einträgst.
 |---|---|---|
 | **Jellyfin** | Dein eigener Medienserver | Serveradresse + API-Schlüssel |
 | **Eigene Stream-Liste** | M3U- oder JSON-Liste mit eigenen Adressen | Eine erreichbare URL |
+| **Adresse** | Eine einzelne Stream-Adresse eintippen und abspielen | nichts |
 | **Demo-Bibliothek** | Sofort etwas zum Ausprobieren | nichts |
+
+### Adresse abspielen
+
+Reiter **Adresse** (oder die blaue Taste): Adresse einer Videodatei oder eines
+Streams eintippen und sofort abspielen. Fehlt das Schema, wird `https://`
+ergänzt. Über **Merken** landet die Adresse im Speicher des Fernsehers und
+erscheint danach als eigene Reihe auf der Startseite, in der Suche und in
+„Weiterschauen".
 
 ### Jellyfin
 
@@ -84,6 +93,32 @@ Sechs Titel, die ohne jede Einrichtung laufen:
 
 Lizenz und Urheber stehen an jedem Eintrag in der Detailansicht — bei CC BY
 ist die Namensnennung Pflicht.
+
+---
+
+## Auf dem Fernseher aufrufen (ohne Installation)
+
+Die App läuft im Cluster und ist im LG-Browser direkt erreichbar — kein
+Developer Mode, keine IPK, keine 50-Stunden-Frist:
+
+```
+http://10.10.1.4:30080/
+```
+
+Antwortet auch über `10.10.1.5` und `172.10.1.2`, falls ein Knoten aus ist.
+Bewusst eine nackte IP mit Port statt eines Hostnamens: der Fernseher hat
+weder einen Ziti-Client noch DNS für `*.benz-sw.de`.
+
+Ausgerollt mit `kubectl apply -f k8s/kinoraum.yaml`. Ein initContainer klont
+den Stand aus diesem Repo, nginx liefert ihn aus. Nach einem Push genügt:
+
+```bash
+kubectl -n kinoraum rollout restart deploy/kinoraum
+```
+
+Die Fassung als **IPK** bleibt trotzdem die bessere: im Browser greifen die
+Fernbedienungstasten weniger zuverlässig, und die Zurück-Taste wirkt auf den
+Browserverlauf statt auf die App.
 
 ---
 
