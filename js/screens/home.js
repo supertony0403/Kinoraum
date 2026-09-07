@@ -1,22 +1,23 @@
 /* Startseite: Buehne oben, darunter waagerechte Reihen.
 
-   Die Reihen werden per transform verschoben statt per scrollLeft. Auf
-   schwachen Panels ist das der einzige Weg, der ruhig laeuft, weil die
-   Verschiebung auf der GPU bleibt und kein Neuzeichnen ausloest. */
+   Das Nachfuehren des Fokus (senkrecht wie waagerecht) steht in core/nav.js
+   und gilt damit fuer alle Schirme. Frueher lag es hier und griff nur auf
+   der Startseite - auf Suche, Einstellungen und Detailblatt lief der Fokus
+   deshalb unsichtbar aus dem Bild. */
 (function (global) {
   "use strict";
 
   var U = global.U, Nav = global.Nav, Cards = global.Cards, Library = global.Library;
 
-  var elScreen, elRows, elHero;
-  var offsets = {};              // Reihenschluessel -> aktuelle Verschiebung
+  /* Deckel je Reihe. Eine IPTV-Liste bringt schnell tausende Eintraege mit;
+     ungebremst entstehen zehntausende DOM-Knoten und der Fokus braucht pro
+     Tastendruck ueber eine Sekunde. Was darueber liegt, bleibt ueber die
+     Suche erreichbar - der Hinweis in der Reihenkopfzeile sagt das auch. */
+  var MAX_PRO_REIHE = 60;
+
+  var elScreen, elRows;
   var featured = null;
   var built = false;
-
-  function safePx() {
-    var v = getComputedStyle(document.documentElement).getPropertyValue("--safe");
-    return parseInt(v, 10) || 72;
-  }
 
   /* ---------------------------------------------------------------- Buehne */
 
@@ -65,15 +66,20 @@
     sec.setAttribute("data-nav-section", "row");
     sec.setAttribute("data-row-key", row.key);
 
+    var gezeigt = row.items.slice(0, MAX_PRO_REIHE);
+
     var head = U.el("div", "row__head");
     head.appendChild(U.el("h2", "row__title", row.title));
-    head.appendChild(U.el("span", "row__note", row.items.length + " Titel"));
+    head.appendChild(U.el("span", "row__note",
+      gezeigt.length < row.items.length
+        ? gezeigt.length + " von " + row.items.length + " - Rest ueber die Suche"
+        : row.items.length + " Titel"));
     sec.appendChild(head);
 
     var vp = U.el("div", "row__vp");
     var track = U.el("div", "row__track");
 
-    row.items.forEach(function (it) {
+    gezeigt.forEach(function (it) {
       track.appendChild(Cards.make(it, {
         onSelect: function (x) { global.App.go("#/detail/" + encodeURIComponent(x.id)); }
       }));
@@ -81,95 +87,50 @@
 
     vp.appendChild(track);
     sec.appendChild(vp);
-    offsets[row.key] = 0;
     return sec;
-  }
-
-  /** Verschiebt die Spur nur so weit, dass die Kachel frei steht. */
-  function reveal(card) {
-    var track = card.parentNode;
-    var vp = track.parentNode;
-    var sec = vp.parentNode;
-    var key = sec.getAttribute("data-row-key");
-    if (!key) { return; }
-
-    var safe = safePx();
-    var lead = 40;
-    var cur = offsets[key] || 0;
-    var vpW = vp.clientWidth;
-    var maxShift = Math.max(0, track.scrollWidth - vpW);
-
-    var left = card.offsetLeft;
-    var w = card.offsetWidth;
-    var visL = left - cur;
-    var visR = visL + w;
-    var target = cur;
-
-    if (visR > vpW - safe) {
-      target = left + w - vpW + safe + lead;
-    } else if (visL < safe) {
-      target = left - safe - lead;
-    }
-
-    target = Math.max(0, Math.min(target, maxShift));
-    if (target === cur) { return; }
-    offsets[key] = target;
-    track.style.transform = "translateX(" + (-target) + "px)";
-  }
-
-  /* Sanftes senkrechtes Nachfuehren. scroll-behavior:smooth gibt es erst ab
-     Chromium 61, deshalb hier von Hand. */
-  var tweenId = null;
-  function scrollTo(node, top) {
-    if (tweenId) { cancelAnimationFrame(tweenId); tweenId = null; }
-    var from = node.scrollTop;
-    var delta = top - from;
-    if (Math.abs(delta) < 2) { node.scrollTop = top; return; }
-    var t0 = 0;
-    var dur = 260;
-
-    function step(ts) {
-      if (!t0) { t0 = ts; }
-      var p = Math.min(1, (ts - t0) / dur);
-      // weiches Ausklingen
-      var e = 1 - Math.pow(1 - p, 3);
-      node.scrollTop = from + delta * e;
-      if (p < 1) { tweenId = requestAnimationFrame(step); } else { tweenId = null; }
-    }
-    tweenId = requestAnimationFrame(step);
-  }
-
-  function followVertically(el) {
-    var r = el.getBoundingClientRect();
-    var vh = global.innerHeight;
-    var head = 150;              // Kopfzeile freihalten
-    var foot = 90;
-    var top = elScreen.scrollTop;
-
-    if (r.top < head) {
-      scrollTo(elScreen, top + r.top - head - 26);
-    } else if (r.bottom > vh - foot) {
-      scrollTo(elScreen, top + (r.bottom - (vh - foot)) + 26);
-    }
   }
 
   /* ---------------------------------------------------------------- Aufbau */
 
+  function emptyState() {
+    var empty = U.el("div", "empty");
+    empty.appendChild(U.el("b", null, "Noch keine Quelle eingerichtet"));
+    empty.appendChild(document.createTextNode(
+      "Unter Einstellungen laesst sich ein Jellyfin-Server verbinden oder eine eigene " +
+      "Stream-Liste hinterlegen. Ueber „Adresse“ geht auch eine einzelne " +
+      "Stream-Adresse. Die mitgelieferte Demo-Bibliothek kann dort wieder " +
+      "eingeschaltet werden."));
+
+    // Ohne fokussierbares Element haette dieser Schirm gar keinen Fokusring,
+    // und der Nutzer haelt die App fuer abgestuerzt.
+    var acts = U.el("div", "set-acts");
+    acts.setAttribute("data-nav-section", "empty");
+    acts.style.marginTop = "36px";
+
+    var a = U.el("button", "btn btn--primary", "Zu den Einstellungen");
+    a.setAttribute("data-focusable", "");
+    a.addEventListener("click", function () { global.App.go("#/settings"); });
+    acts.appendChild(a);
+
+    var b = U.el("button", "btn", "Adresse abspielen");
+    b.setAttribute("data-focusable", "");
+    b.addEventListener("click", function () { global.App.go("#/open"); });
+    acts.appendChild(b);
+
+    empty.appendChild(acts);
+    return empty;
+  }
+
   function render(data) {
+    // Ohne das Abmelden bleiben die alten Bilder samt Kachelbaum am
+    // IntersectionObserver haengen - bei jedem Neuladen eine Kopie mehr.
+    Cards.release(elRows);
     U.clear(elRows);
-    offsets = {};
 
     if (!data.rows.length) {
-      var empty = U.el("div", "empty");
-      var strong = U.el("b", null, "Noch keine Quelle eingerichtet");
-      empty.appendChild(strong);
-      empty.appendChild(document.createTextNode(
-        "Unter Einstellungen laesst sich ein Jellyfin-Server verbinden oder eine eigene " +
-        "Stream-Liste hinterlegen. Die mitgelieferte Demo-Bibliothek kann dort ebenfalls " +
-        "wieder eingeschaltet werden."
-      ));
-      elRows.appendChild(empty);
+      elRows.appendChild(emptyState());
       U.$("#hero").style.display = "none";
+      built = true;                 // sonst laedt jeder Besuch den Bestand neu
       return;
     }
 
@@ -197,20 +158,12 @@
     init: function () {
       elScreen = U.$("#screen-home");
       elRows = U.$("#rows");
-      elHero = U.$("#hero");
 
       U.$("#hero-play").addEventListener("click", function () {
         if (featured) { global.App.play(featured); }
       });
       U.$("#hero-info").addEventListener("click", function () {
         if (featured) { global.App.go("#/detail/" + encodeURIComponent(featured.id)); }
-      });
-
-      Nav.onFocus(function (el, why) {
-        if (why === "pointer" || !elScreen || elScreen.hidden) { return; }
-        if (!elScreen.contains(el)) { return; }
-        if (el.classList.contains("card")) { reveal(el); }
-        followVertically(el);
       });
     },
 
@@ -232,10 +185,16 @@
       if (!built) { return; }
       var keep = Nav.current ? Nav.current.getAttribute("data-id") : null;
       render({ rows: Library.rows() });
-      if (keep) {
-        var again = U.$('[data-id="' + keep.replace(/"/g, '\\"') + '"]', elRows);
-        if (again) { Nav.focus(again, "restore"); reveal(again); }
-      }
+      if (!keep) { return; }
+
+      // Bewusst kein querySelector mit eingesetzter Kennung: ein Backslash
+      // oder Steuerzeichen aus einer Server-Kennung wuerfe dort SyntaxError
+      // und risse das Auffrischen mit.
+      var again = null;
+      U.$$("[data-id]", elRows).forEach(function (n) {
+        if (!again && n.getAttribute("data-id") === keep) { again = n; }
+      });
+      if (again) { Nav.focus(again, "restore"); }
     },
 
     enter: function () {
@@ -243,7 +202,7 @@
       var p = built ? Promise.resolve() : Home.reload();
       return p.then(function () {
         if (!Nav.current || !elScreen.contains(Nav.current)) {
-          Nav.focus(U.$("#hero-play")) || Nav.focusFirst(elScreen);
+          if (!Nav.focus(U.$("#hero-play"))) { Nav.focusFirst(elScreen); }
         }
       });
     },

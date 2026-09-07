@@ -39,6 +39,12 @@
   var hintTimer = null;
   var closing = false;
 
+  /* Jeder Start bekommt eine Nummer. Wird der Player geschlossen, waehrend
+     noch eine Anfrage laeuft, kommt deren Antwort spaeter zurueck und faende
+     item === null vor. Vorher gab das eine JavaScript-Fehlermeldung als
+     Klartext-Toast auf der Startseite und ein zweites close(). */
+  var gen = 0;
+
   /* ---------------------------------------------------------------- Oberflaeche */
 
   function showUI() {
@@ -139,6 +145,7 @@
   }
 
   function useNextStream(why) {
+    if (!item) { return false; }        // Player laengst zu
     if (streamIx + 1 >= streams.length) {
       spinner(false);
       global.App.toast("Wiedergabe nicht moeglich: " + why, 6000);
@@ -152,6 +159,7 @@
   }
 
   function play(stream) {
+    if (!item) { return; }
     teardown();
     spinner(true);
     attachSubtitles();
@@ -193,8 +201,10 @@
     var go = video.play();
     if (go && go.catch) {
       go.catch(function () {
-        // Der Fernseher verlangt in seltenen Faellen eine Geste; die Leiste
-        // steht ohnehin offen, OK startet dann.
+        /* Nur melden, wenn die Wiedergabe wirklich an einer fehlenden Geste
+           haengt. Nach einem toten Strom ist die Absage die Folge des
+           Ladefehlers - "Mit OK starten" waere dort eine falsche Faehrte. */
+        if (!item || video.error) { return; }
         spinner(false);
         showUI();
         global.App.toast("Mit OK starten", 3000);
@@ -235,6 +245,7 @@
   function closePanel() {
     elPanel.hidden = true;
     U.clear(elPanel);
+    Nav.setScope(elRoot);
     Nav.focus(elBar);
     showUI();
   }
@@ -243,6 +254,9 @@
     U.clear(elPanel);
     elPanel.hidden = false;
     build(elPanel);
+    // Solange das Blatt offen ist, bleibt der Fokus darin - sonst rutscht er
+    // seitlich in die Steuerleiste dahinter, die der Nutzer gar nicht sieht.
+    Nav.setScope(elPanel);
     var first = U.$("[data-focusable]", elPanel);
     if (first) { Nav.focus(first); }
     showUI();
@@ -345,10 +359,13 @@
   function close() {
     if (closing) { return; }
     closing = true;
+    gen++;                       // laufende Antworten laufen damit ins Leere
     save();
     if (saveTimer) { clearInterval(saveTimer); saveTimer = null; }
     if (uiTimer) { clearTimeout(uiTimer); uiTimer = null; }
     if (seekTimer) { clearTimeout(seekTimer); seekTimer = null; }
+    if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
+    elHint.hidden = true;
     teardown();
     elPanel.hidden = true;
     U.clear(elPanel);
@@ -357,6 +374,7 @@
     U.$("#chrome").classList.remove("chrome--off");
     item = null;
     closing = false;
+    Nav.setScope(null);
     global.App.afterPlayback();
   }
 
@@ -413,6 +431,7 @@
       });
 
       video.addEventListener("error", function () {
+        if (!item) { return; }          // verspaeteter Fehler nach dem Schliessen
         var code = video.error ? video.error.code : 0;
         var why = code === 4 ? "Format wird nicht unterstuetzt"
                 : code === 2 ? "Netzwerkfehler"
@@ -435,12 +454,16 @@
     },
 
     start: function (target, at) {
+      var my = ++gen;
       item = target;
       startAt = at || 0;
       streamIx = 0;
       closing = false;
 
       elRoot.hidden = false;
+      // Der Schirm darunter bleibt sichtbar; ohne Begrenzung faellt der Fokus
+      // von der Steuerleiste in eine Kachel, die niemand sehen kann.
+      Nav.setScope(elRoot);
       U.$("#chrome").classList.add("chrome--off");
       elTitle.textContent = target.title;
       var bits = [];
@@ -457,7 +480,8 @@
       Nav.focus(elBar);
 
       Library.resolve(target).then(function (full) {
-        streams = full.streams || [];
+        if (my !== gen) { return; }     // inzwischen geschlossen oder neu gestartet
+        streams = (full && full.streams) || [];
         if (!streams.length) {
           spinner(false);
           global.App.toast("Zu diesem Titel gibt es keine Abspieladresse.", 5000);
@@ -468,6 +492,7 @@
         if (saveTimer) { clearInterval(saveTimer); }
         saveTimer = setInterval(save, SAVE_EVERY_MS);
       }).catch(function (err) {
+        if (my !== gen) { return; }
         spinner(false);
         global.App.toast("Quelle antwortet nicht: " + err.message, 6000);
         close();

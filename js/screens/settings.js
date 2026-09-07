@@ -273,7 +273,12 @@
     acts.appendChild(button("Auf Werkszustand", "btn--danger", function () {
       Store.reset();
       st.set("Zurueckgesetzt. Bestand wird neu geladen.", "ok");
-      global.ScreenHome.reload().then(function () { Settings.render(); });
+      global.ScreenHome.reload().then(function () {
+        Settings.render();
+        // Ohne das zeigt Nav.current auf einen zerstoerten Knopf, und
+        // Hoch/Links tun danach ueberhaupt nichts mehr.
+        Nav.focusFirst(elBody);
+      });
     }));
 
     g.appendChild(acts);

@@ -158,7 +158,7 @@
 
     g.appendChild(U.el("p", "set-group__note",
       links.length + (links.length === 1 ? " Eintrag" : " Eintraege") +
-      " - stehen auf der Startseite unter „Meine Adressen“."));
+      " - stehen auf der Startseite unter: Meine Adressen"));
 
     links.forEach(function (l) {
       var row = U.el("div", "linkrow");

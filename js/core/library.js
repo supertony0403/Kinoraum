@@ -117,7 +117,15 @@
       // Jede Quelle einzeln absichern: eine Absage darf die anderen nicht
       // mitreissen, deshalb wird jeder Fehler in einen leeren Treffer gewandelt.
       var jobs = srcs.map(function (s) {
-        return s.list().catch(function (err) {
+        return s.list().then(function (list) {
+          // Manche Quellen melden auch bei Erfolg etwas Wichtiges,
+          // etwa eine gekuerzte Liste.
+          if (s.note) {
+            var n = s.note();
+            if (n) { problems.push({ source: s.label, message: n }); }
+          }
+          return list;
+        }).catch(function (err) {
           problems.push({ source: s.label, message: err && err.message ? err.message : "Unbekannter Fehler" });
           return [];
         });

@@ -10,6 +10,11 @@
 
   var VERSION = "1.0.0";
 
+  // Reiter ersetzen einander, statt sich zu stapeln - sonst braucht es nach
+  // 15 Wechseln 15 Druecke auf Zurueck, um die App zu verlassen.
+  var TABS = { home: 1, search: 1, open: 1, settings: 1 };
+  var MAX_STAPEL = 20;
+
   var SCREENS = {};
   var currentId = null;
   var stack = [];                 // Wege fuer die Zurueck-Taste
@@ -58,7 +63,12 @@
 
     go: function (hash) {
       var cur = global.location.hash;
-      if (cur && cur !== hash) { stack.push(cur); }
+      if (TABS[parse(hash).name]) {
+        stack.length = 0;
+      } else if (cur && cur !== hash) {
+        stack.push(cur);
+        while (stack.length > MAX_STAPEL) { stack.shift(); }
+      }
       if (global.location.hash === hash) {
         show(parse(hash));
       } else {
@@ -140,6 +150,9 @@
 
     var dir = Keys.dirOf(code);
     if (dir) {
+      // Im Textfeld gehoeren links/rechts der Schreibmarke. Vorher hat das
+      // pauschale preventDefault sie festgenagelt.
+      if (inField && (dir === "left" || dir === "right")) { return; }
       ev.preventDefault();
       Nav.move(dir);
       return;
@@ -195,17 +208,27 @@
     tickClock();
     setInterval(tickClock, 20000);
 
+    /* Der Startvorhang deckt den ganzen Schirm. Bleibt er stehen - etwa weil
+       eine Quelle in ihr Zeitlimit laeuft oder die Kette eine Ausnahme wirft -
+       sitzt der Nutzer vor Schwarz, ohne Ausweg. Deshalb faellt er auf jeden
+       Fall, notfalls nach zwoelf Sekunden. */
+    var bootWeg = false;
+    function hideBoot() {
+      if (bootWeg) { return; }
+      bootWeg = true;
+      var b = U.$("#boot");
+      b.classList.add("boot--off");
+      setTimeout(function () { b.hidden = true; }, 400);
+    }
+    setTimeout(hideBoot, 12000);
+
     // Der Bestand wird einmal beim Start geholt; danach nur noch auf Zuruf.
     global.ScreenHome.reload().catch(function (err) {
       App.toast("Bestand konnte nicht geladen werden: " + err.message, 6000);
     }).then(function () {
       if (!global.location.hash) { global.location.hash = "#/home"; }
       return show(parse(global.location.hash));
-    }).then(function () {
-      var b = U.$("#boot");
-      b.classList.add("boot--off");
-      setTimeout(function () { b.hidden = true; }, 400);
-    });
+    }).then(hideBoot, hideBoot);
 
     /* webOS meldet den Wechsel in den Hintergrund. Dann anhalten und merken -
        sonst laeuft der Ton weiter, waehrend der Nutzer fernsieht. */

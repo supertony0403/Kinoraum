@@ -13,7 +13,6 @@
   "iconColor": "#ff3d5a",
   "disableBackHistoryAPI": true,
   "supportPortraitMode": false,
-  "handlesRelaunch": true,
   "requiredMemory": 200,
   "resolution": "1920x1080"
 }

@@ -77,6 +77,9 @@
     enter: function () {
       elScreen.hidden = false;
       elScreen.scrollTop = 0;
+      // leave() hat die Bilder abgemeldet, die Liste aber stehen gelassen -
+      // ohne dieses Anmelden blieben sie fuer immer graue Flaechen.
+      Cards.hydrate(elResults);
       Nav.focus(elField);
       return Promise.resolve();
     },

@@ -19,6 +19,14 @@
 
   var U = global.U;
 
+  /* Ungebremst ist genau das die Quelle, an der die App stirbt: uebliche
+     IPTV-Listen haben 5.000 bis 50.000 Zeilen, daraus werden zehntausende
+     DOM-Knoten und ueber eine Sekunde Wartezeit pro Tastendruck. Was
+     abgeschnitten wird, sagt die App im Klartext - stilles Kuerzen liest
+     sich wie "alles da". */
+  var MAX = 1000;
+  var lastNote = null;
+
   /* --------------------------------------------------------------- Parser */
 
   function typeOf(url) {
@@ -107,8 +115,12 @@
       return c.enabled === true && !!c.url;
     },
 
+    /** Hinweis zum letzten Ladevorgang, den die Bibliothek einsammelt. */
+    note: function () { return lastNote; },
+
     list: function () {
       var cfg = global.Store.source("streams");
+      lastNote = null;
       if (!cfg.url) { return Promise.resolve([]); }
 
       return U.http({ url: cfg.url, json: false, timeout: 20000 }).then(function (text) {
@@ -122,11 +134,18 @@
           throw new Error("Format nicht erkannt (weder M3U noch JSON)");
         }
 
+        var gesamt = raws.length;
+        if (raws.length > MAX) { raws = raws.slice(0, MAX); }
+
         var out = [];
         raws.forEach(function (r, i) {
           var it = normalise(r, i);
           if (it) { out.push(it); }
         });
+        if (gesamt > MAX) {
+          lastNote = "Liste gekuerzt: " + MAX + " von " + gesamt +
+                     " Eintraegen geladen (sonst wird der Fernseher unbedienbar)";
+        }
         return out;
       });
     },

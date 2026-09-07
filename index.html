@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1920,initial-scale=1">
+<!-- Skripte nur aus der App selbst. Bilder, Video und Abfragen muessen zu
+     beliebigen Servern duerfen: die Quellen traegt der Nutzer ein.
+     'unsafe-inline' bei style, weil Kacheln ihre Farbflaeche per style-Attribut
+     bekommen. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; media-src * blob:; connect-src *; frame-src 'none'; object-src 'none'; base-uri 'none'">
 <title>Kinoraum</title>
 <link rel="stylesheet" href="css/app.css">
 </head>

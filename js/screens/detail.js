@@ -7,7 +7,6 @@
       Library = global.Library, Store = global.Store;
 
   var elScreen, elBody;
-  var shown = null;
 
   function factLine(item) {
     var f = [];
@@ -36,7 +35,6 @@
 
   function render(item) {
     U.clear(elBody);
-    shown = item;
 
     var art = U.el("div", "detail__art");
     if (item.backdrop) {
@@ -169,7 +167,6 @@
     leave: function () {
       Cards.release(elBody);
       elScreen.hidden = true;
-      shown = null;
     }
   };
 
