@@ -118,6 +118,20 @@
     g.appendChild(fKey);
     g.appendChild(fUser);
 
+    /* Wird die App ueber http ausgeliefert (Fassung als Webseite im Cluster),
+       liegt der Schluessel unverschluesselt im Browser und geht auch
+       unverschluesselt ueber das Netz. Im Heimnetz vertretbar - aber der
+       Nutzer soll es wissen und nicht raten muessen. */
+    if (global.location.protocol === "http:" && global.location.hostname !== "localhost" &&
+        global.location.hostname !== "127.0.0.1") {
+      var warn = statusLine();
+      warn.set("Diese Fassung laeuft ueber http (" + global.location.host + "). " +
+               "Ein hier eingetragener Schluessel wird unverschluesselt gespeichert und " +
+               "uebertragen - im eigenen Netz vertretbar, darueber hinaus nicht. " +
+               "Die als App installierte Fassung ist davon nicht betroffen.", "bad");
+      g.appendChild(warn);
+    }
+
     var st = statusLine();
     var acts = U.el("div", "set-acts");
 
