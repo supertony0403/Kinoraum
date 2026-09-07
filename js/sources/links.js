@@ -24,6 +24,8 @@
   function titleFromUrl(url) {
     var s = String(url).split("?")[0].split("#")[0];
     var last = s.substring(s.lastIndexOf("/") + 1);
+    // "Der%20Film.mp4" soll "Der Film" ergeben, nicht "Der%20Film".
+    try { last = decodeURIComponent(last); } catch (e) { /* bleibt wie es ist */ }
     last = last.replace(/\.[a-z0-9]{2,5}$/i, "");
     last = last.replace(/[._+-]+/g, " ").replace(/\s+/g, " ").trim();
     if (!last) {

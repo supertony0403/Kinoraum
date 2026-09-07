@@ -53,6 +53,17 @@ if command -v node >/dev/null 2>&1; then
   echo "   Alle Skripte syntaktisch geprueft"
 fi
 
+# Die Kurzform inset: gibt es erst ab Chromium 87, Ziel ist Chromium 53.
+# Sie faellt dort ersatzlos weg - der Fokusring wird unsichtbar und die
+# Schirme verlieren ihre Vollflaeche, ohne dass im Testbrowser etwas auffiele.
+if grep -nE '(^|[{;[:space:]])inset:' css/*.css | grep -v 'box-shadow' | grep -q .; then
+  echo "!! CSS-Kurzform 'inset:' gefunden - auf Chromium 53 wirkungslos:"
+  grep -nE '(^|[{;[:space:]])inset:' css/*.css | grep -v 'box-shadow' | sed 's/^/     /'
+  echo "   Stattdessen top/right/bottom/left einzeln schreiben."
+  exit 1
+fi
+echo "   CSS auf Chromium-53-Vertraeglichkeit geprueft"
+
 [ -f assets/icon.png ] || { echo "!! assets/icon.png fehlt (scripts/make_assets.py)"; exit 1; }
 
 if [ ! -d assets/demo ] || [ -z "$(ls -A assets/demo 2>/dev/null)" ]; then

@@ -5,6 +5,7 @@
 (function (global) {
   "use strict";
 
+  var U = global.U;
   var NS = "kinoraum.v1";
   var MAX_PROGRESS = 200;      // sonst waechst der Eintrag unbegrenzt
 
@@ -136,21 +137,29 @@
       for (i = 0; i < state.links.length; i++) {
         if (state.links[i].url === url) { existing = state.links[i]; break; }
       }
+      // Ist der Speicher gesperrt, meldet save() false. Dann darf die
+      // Oberflaeche nicht "gemerkt" sagen - der Eintrag waere beim naechsten
+      // Start weg, ohne dass es jemand ahnt.
       if (existing) {
         if (title) { existing.title = title; }
-        save();
-        return existing;
+        return save() ? existing : null;
       }
 
       var entry = { url: url, title: title || "", at: Store.stamp() };
       state.links.unshift(entry);
       if (state.links.length > 200) { state.links.length = 200; }
-      save();
+      if (!save()) {
+        state.links.shift();
+        return null;
+      }
       return entry;
     },
 
     removeLink: function (url) {
       state.links = state.links.filter(function (l) { return l.url !== url; });
+      // Der Merkpunkt haengt an der Kennung der Adresse. Bleibt er stehen,
+      // taucht der geloeschte Eintrag als Karteileiche in "Weiterschauen" auf.
+      delete state.progress["links:" + U.hash(url)];
       save();
     },
 

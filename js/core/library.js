@@ -101,7 +101,10 @@
     get items() { return items; },
     get problems() { return problems; },
 
-    get: function (id) { return byId[id] || null; },
+    get: function (id) {
+      // Ohne hasOwnProperty liefert byId["constructor"] die Object-Funktion.
+      return Object.prototype.hasOwnProperty.call(byId, id) ? byId[id] : null;
+    },
 
     activeSources: active,
 

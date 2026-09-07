@@ -112,11 +112,11 @@ img { border: 0; }
 
 /* ---------------------------------------------------------------- Buehnen */
 
-.screens { position: absolute; inset: 0; }
+.screens { position: absolute; top: 0; right: 0; bottom: 0; left: 0; }
 
 .screen {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
@@ -131,7 +131,7 @@ img { border: 0; }
 
 .hero { position: relative; height: 590px; }
 
-.hero__art { position: absolute; inset: 0; overflow: hidden; }
+.hero__art { position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; }
 .hero__art img {
   width: 100%;
   height: 100%;
@@ -146,13 +146,13 @@ img { border: 0; }
 .hero--noart::before {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   background: radial-gradient(120% 90% at 78% 18%, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 62%);
 }
 
 .hero__shade {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   background:
     linear-gradient(to right, var(--bg) 0%, rgba(7, 8, 12, 0.94) 30%, rgba(7, 8, 12, 0.35) 62%, rgba(7, 8, 12, 0.05) 100%),
     linear-gradient(to top, var(--bg) 2%, rgba(7, 8, 12, 0.25) 40%, rgba(7, 8, 12, 0.55) 100%);
@@ -224,7 +224,7 @@ img { border: 0; }
 [data-focusable]::after {
   content: "";
   position: absolute;
-  inset: -6px;
+  top: -6px; right: -6px; bottom: -6px; left: -6px;
   border-radius: inherit;
   box-shadow: 0 0 0 4px var(--warm);
   opacity: 0;
@@ -274,7 +274,7 @@ img { border: 0; }
   text-align: left;
 }
 .card.is-focused { transform: scale(1.09); z-index: 3; }
-.card::after { inset: -6px -6px 86px; }   /* Ring nur um das Bild, nicht um die Bildunterschrift */
+.card::after { top: -6px; right: -6px; bottom: 86px; left: -6px; }   /* Ring nur um das Bild, nicht um die Bildunterschrift */
 
 .card__art {
   position: relative;
@@ -291,7 +291,7 @@ img { border: 0; }
    (siehe util.tintFor) plus grosser Titel - sieht gewollt aus statt kaputt. */
 .card__fallback {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   display: flex;
   align-items: flex-end;
   padding: 20px;
@@ -309,7 +309,7 @@ img { border: 0; }
 
 .card__img {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -471,7 +471,7 @@ img { border: 0; }
 .detail__art::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   background: linear-gradient(to top, var(--bg) 8%, rgba(7, 8, 12, 0.55) 55%, rgba(7, 8, 12, 0.75) 100%);
 }
 
@@ -491,13 +491,13 @@ img { border: 0; }
 
 /* ---------------------------------------------------------------- Wiedergabe */
 
-.player { position: fixed; inset: 0; background: #000; z-index: 60; }
+.player { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: #000; z-index: 60; }
 
 .player__video { width: 100%; height: 100%; background: #000; display: block; }
 
 .player__scrim {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   opacity: 0;
   transition: opacity 220ms ease;
   pointer-events: none;
@@ -556,7 +556,7 @@ img { border: 0; }
   transition: opacity 150ms ease;
 }
 .bar.is-focused .bar__knob { opacity: 1; }
-.bar::after { inset: -14px -10px; border-radius: 14px; }
+.bar::after { top: -14px; right: -10px; bottom: -14px; left: -10px; border-radius: 14px; }
 
 .bar__times {
   display: flex;
@@ -675,7 +675,7 @@ img { border: 0; }
 
 .boot {
   position: fixed;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   z-index: 95;
   display: flex;
   flex-direction: column;

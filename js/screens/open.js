@@ -16,6 +16,12 @@
   var lastUrl = "";
   var lastTitle = "";
 
+  /* Wie im Player: jeder Abspielwunsch bekommt eine Nummer. Verlaesst der
+     Nutzer den Schirm, waehrend die Vorabpruefung noch laeuft (bis zu 18 s
+     bei einer toten Adresse), darf deren spaete Antwort keinen Player mehr
+     aufreissen - schon gar nicht ueber einem inzwischen gestarteten Film. */
+  var gen = 0;
+
   /* ---------------------------------------------------------------- Adresse */
 
   /** Ergaenzt ein fehlendes Schema und schneidet Leerzeichen weg. */
@@ -102,17 +108,38 @@
     acts.appendChild(button("Jetzt abspielen", "btn--primary", function () {
       var url = take();
       if (!url) { return; }
+      // Titel jetzt lesen, nicht im Rueckruf: das Feld kann bis dahin neu
+      // gezeichnet und der alte Knoten abgehaengt sein.
+      var titel = fTitle.__input.value.trim();
+      var my = ++gen;
+
       say("Adresse wird geprueft ...");
-      // Erst anklopfen: lieber hier eine klare Meldung als ein schwarzes Bild.
       probe(url).then(function (info) {
+        if (my !== gen) { return; }
         say(info, "ok");
-        global.App.play(global.SourceLinks.itemFor(url, fTitle.__input.value.trim()), 0);
-      }).catch(function () {
-        /* Fremde Server erlauben dem Browser die Vorabfrage meist nicht (CORS).
-           Das sagt nichts ueber die Adresse aus - das Abspielen selbst
-           unterliegt der Regel nicht. Also neutral melden und starten. */
-        say("Vorabpruefung nicht moeglich (der Server erlaubt sie nicht) - wird direkt abgespielt.");
-        global.App.play(global.SourceLinks.itemFor(url, fTitle.__input.value.trim()), 0);
+        global.App.play(global.SourceLinks.itemFor(url, titel), 0);
+      }).catch(function (err) {
+        if (my !== gen) { return; }
+        var msg = (err && err.message) ? err.message : "";
+
+        /* Frueher lief jede Absage als "CORS" durch und der Player startete
+           trotzdem - ein Tippfehler endete damit im schwarzen Bild, genau
+           dem Fall, den die Vorabpruefung verhindern soll. Ein Serverstatus
+           oder eine Zeitueberschreitung sind aber eindeutig. */
+        if (msg.indexOf("Server meldet ") === 0) {
+          say("Der Server antwortet mit " + msg.replace("Server meldet ", "") +
+              " - die Adresse stimmt vermutlich nicht.", "bad");
+          return;
+        }
+        if (msg === "Zeitueberschreitung") {
+          say("Der Server antwortet nicht (Zeitueberschreitung).", "bad");
+          return;
+        }
+        /* Bleibt Status 0: Verbot durch den Browser (CORS) und echter
+           Verbindungsfehler sind ueber XHR nicht zu unterscheiden. Das
+           Abspielen selbst unterliegt der Regel nicht, also starten. */
+        say("Vorabpruefung nicht moeglich - wird direkt abgespielt.");
+        global.App.play(global.SourceLinks.itemFor(url, titel), 0);
       });
     }));
 
@@ -120,13 +147,21 @@
       var url = take();
       if (!url) { return; }
       var entry = Store.addLink(url, fTitle.__input.value.trim());
-      if (!entry) { say("Konnte nicht gespeichert werden.", "bad"); return; }
-      say("Gemerkt: " + (entry.title || global.SourceLinks.titleFromUrl(url)), "ok");
+      if (!entry) {
+        say("Der Speicher des Fernsehers nimmt nichts an - die Adresse waere " +
+            "beim naechsten Start wieder weg.", "bad");
+        return;
+      }
+      var name = entry.title || global.SourceLinks.titleFromUrl(url);
       fUrl.__input.value = "";
       fTitle.__input.value = "";
       lastUrl = "";
       lastTitle = "";
-      global.App.reloadLibrary().then(function () { renderKeep(); });
+      // Erst neu zeichnen, dann melden: das Neuzeichnen wirft die Statuszeile weg.
+      global.App.reloadLibrary().then(function () {
+        renderKeep();
+        global.App.toast("Gemerkt: " + name);
+      });
     }));
 
     g.appendChild(acts);
@@ -176,7 +211,14 @@
       del.addEventListener("click", function () {
         Store.removeLink(l.url);
         global.App.toast("Entfernt");
-        global.App.reloadLibrary().then(function () { renderKeep(); });
+        global.App.reloadLibrary().then(function () {
+          renderKeep();
+          // Nach dem Neuzeichnen in der Liste bleiben, statt ganz oben im
+          // Adressfeld zu landen - sonst muss man sich jedes Mal neu
+          // hinunterarbeiten, um mehrere Eintraege zu loeschen.
+          var naechster = U.$("#open-body .linkrow [data-focusable]");
+          if (naechster) { Nav.focus(naechster, "nachLoeschen"); }
+        });
       });
 
       row.appendChild(play);
@@ -227,7 +269,10 @@
       return Promise.resolve();
     },
 
-    leave: function () { elScreen.hidden = true; }
+    leave: function () {
+      gen++;                       // laufende Vorabpruefungen entwerten
+      elScreen.hidden = true;
+    }
   };
 
   return (global.ScreenOpen = Open);

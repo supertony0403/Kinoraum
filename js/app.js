@@ -28,7 +28,12 @@
     var parts = raw.split("/");
     var name = parts[0] || "home";
     if (name === "detail") {
-      return { name: "detail", params: { id: decodeURIComponent(parts[1] || "") } };
+      var roh = parts[1] || "";
+      var id;
+      // Ein einzelnes "%" laesst decodeURIComponent werfen; ungeprueft
+      // riss das den ganzen Wegweiser mit und der Schirm blieb leer.
+      try { id = decodeURIComponent(roh); } catch (e) { id = roh; }
+      return { name: "detail", params: { id: id } };
     }
     if (!SCREENS[name]) { return { name: "home", params: {} }; }
     return { name: name, params: {} };
@@ -65,6 +70,14 @@
       var cur = global.location.hash;
       if (TABS[parse(hash).name]) {
         stack.length = 0;
+        /* Im TV-Browser legt jede Hash-Aenderung einen Historieneintrag an.
+           Reiter ersetzen einander, also auch in der Historie ersetzen -
+           sonst laeuft der App-Stapel gegen den Browserverlauf. */
+        if (cur !== hash && global.location.replace) {
+          global.location.replace(global.location.pathname + global.location.search + hash);
+          show(parse(hash));
+          return;
+        }
       } else if (cur && cur !== hash) {
         stack.push(cur);
         while (stack.length > MAX_STAPEL) { stack.shift(); }
@@ -103,6 +116,13 @@
         if (global.webOS && global.webOS.platformBack) { global.webOS.platformBack(); return; }
       } catch (e) { /* egal */ }
       try { global.close(); } catch (e) { /* egal */ }
+
+      /* Im Browser darf eine Seite sich nicht selbst schliessen, wenn sie
+         nicht per Skript geoeffnet wurde. Dann passiert hier sichtbar nichts -
+         das lieber sagen, als den Nutzer ratlos druecken zu lassen. */
+      setTimeout(function () {
+        App.toast("Zum Beenden im Fernseher-Browser die Zurueck-Taste des Geraets nutzen.", 4000);
+      }, 60);
     },
 
     play: function (item, at) {
@@ -201,8 +221,16 @@
 
     document.addEventListener("keydown", onKey, false);
 
+    /* Im Fernseher-Browser wirkt die Zurueck-Taste auf die Historie, nicht
+       auf unseren Tastenhandler. Der Schirm wechselte dann unter dem noch
+       laufenden Film. Also: kommt ein Historiesprung, waehrend der Player
+       offen ist, wird zuerst der Player geschlossen. */
     global.addEventListener("hashchange", function () {
+      if (global.ScreenPlayer.open) { global.ScreenPlayer.close(); }
       show(parse(global.location.hash));
+    });
+    global.addEventListener("popstate", function () {
+      if (global.ScreenPlayer.open) { global.ScreenPlayer.close(); }
     });
 
     tickClock();

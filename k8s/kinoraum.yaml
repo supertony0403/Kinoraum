@@ -10,6 +10,12 @@
 # Erreichbar ueber einen festen NodePort statt ueber einen Hostnamen: der
 # Fernseher hat weder Ziti-Client noch DNS fuer *.benz-sw.de, eine nackte
 # IP mit Port funktioniert dagegen immer.
+#
+# ACHTUNG, bewusst so und nicht anders:
+# Die Auslieferung laeuft ueber HTTP. Wer hier einen Jellyfin-Schluessel in
+# der App hinterlegt, speichert ihn unverschluesselt im Browser und schickt
+# ihn unverschluesselt ueber das LAN. Fuer das Heimnetz vertretbar, fuer
+# alles darueber hinaus nicht - die App weist in den Einstellungen darauf hin.
 ---
 apiVersion: v1
 kind: Namespace
@@ -29,27 +35,47 @@ data:
       root /web;
       index index.html;
 
+      # Die interne Knotenadresse hat auf fremden Bildservern nichts zu suchen.
+      add_header Referrer-Policy "no-referrer" always;
+      add_header X-Content-Type-Options "nosniff" always;
+
       # Die App haelt ihren Zustand im Adressteil hinter #, der Server sieht
       # davon nichts. Alles Unbekannte auf index.html zurueckfallen lassen.
       location / {
         try_files $uri $uri/ /index.html;
       }
 
-      # Bilder und Skripte duerfen zwischengespeichert werden, die Startseite
-      # nicht - sonst zeigt der Fernseher nach einem Update den alten Stand.
-      location ~* \.(jpg|jpeg|png|gif|svg|woff2?)$ {
-        expires 7d;
-        add_header Cache-Control "public";
-      }
-      location ~* \.(js|css)$ {
-        expires 1h;
-        add_header Cache-Control "public";
-      }
-      location = /index.html {
-        add_header Cache-Control "no-store";
+      # Punktdateien nie ausliefern. Der initContainer kopiert zwar nur die
+      # App-Dateien, aber das hier ist der Riegel, der auch dann haelt,
+      # wenn jemand das Kopieren spaeter aufweicht.
+      location ~ /\. {
+        deny all;
+        return 404;
       }
 
-      # Kleine Auskunftsseite fuer Health-Checks
+      # Bilder duerfen liegen bleiben, Skripte nicht.
+      # Frueher standen js/css eine Stunde im Zwischenspeicher, waehrend
+      # index.html sofort neu kam - nach einem Rollout mischte der Fernseher
+      # dann neue Seite mit altem JavaScript. no-cache heisst nicht "nie
+      # speichern", sondern "vor dem Benutzen nachfragen": bei unveraenderter
+      # Datei antwortet nginx mit 304, es wird also nichts neu uebertragen.
+      location ~* \.(jpg|jpeg|png|gif|svg|ico|woff2?)$ {
+        expires 7d;
+        add_header Cache-Control "public";
+        add_header Referrer-Policy "no-referrer" always;
+      }
+      location ~* \.(js|css|html)$ {
+        add_header Cache-Control "no-cache" always;
+        add_header Referrer-Policy "no-referrer" always;
+      }
+
+      # Sagt, welcher Stand ausgeliefert wird - sonst merkt niemand,
+      # dass der Pod auf einem alten Commit haengt.
+      location = /VERSION {
+        add_header Cache-Control "no-store" always;
+        default_type text/plain;
+      }
+
       location = /healthz {
         access_log off;
         return 200 "ok\n";
@@ -69,6 +95,10 @@ metadata:
     app: kinoraum
 spec:
   replicas: 1
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0        # beim Rollout nie eine Luecke fuer den Fernseher
+      maxSurge: 1
   selector:
     matchLabels:
       app: kinoraum
@@ -77,22 +107,68 @@ spec:
       labels:
         app: kinoraum
       annotations:
-        # Erzwingt beim rollout restart einen frischen Clone.
         kinoraum/source: "github.com/supertony0403/Kinoraum"
     spec:
+      # Der Pod spricht nie mit der Kubernetes-API - also auch kein Token.
+      automountServiceAccountToken: false
+      securityContext:
+        # 101 ist der nginx-Benutzer im alpine-Abbild. Alles laeuft unter
+        # derselben Kennung, damit die gemeinsamen Volumes beschreibbar sind.
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
       initContainers:
         - name: fetch
           image: alpine/git:2.45.2
+          env:
+            - name: HOME
+              value: /tmp        # git will ein beschreibbares Zuhause
+          command: ["/bin/sh", "-c"]
           args:
-            - clone
-            - --depth=1
-            - --single-branch
-            - --branch=master
-            - https://github.com/supertony0403/Kinoraum.git
-            - /web
+            - |
+              set -u
+              # Beim Neustart eines Containers laeuft der initContainer erneut,
+              # das emptyDir ist dann aber noch gefuellt. "git clone" verweigert
+              # ein nicht leeres Ziel - vorher lag der Pod danach dauerhaft still.
+              rm -rf /web/* /web/.[!.]* 2>/dev/null || true
+
+              if git clone --depth=1 --single-branch --branch=master \
+                   https://github.com/supertony0403/Kinoraum.git /tmp/src 2>/tmp/err; then
+                # Nur die App kopieren. Frueher lag der ganze Klon im
+                # Wurzelverzeichnis, samt .git und den Manifesten.
+                cp -r /tmp/src/index.html /tmp/src/css /tmp/src/js /tmp/src/assets /web/
+                (cd /tmp/src && git rev-parse --short HEAD) > /web/VERSION 2>/dev/null || true
+                echo "geholt: $(cat /web/VERSION 2>/dev/null)"
+                exit 0
+              fi
+
+              # GitHub nicht erreichbar: lieber eine ehrliche Seite als ein
+              # Pod, der nie hochkommt und einen toten Anschluss hinterlaesst.
+              echo "Klonen fehlgeschlagen:" >&2; cat /tmp/err >&2 || true
+              cat > /web/index.html <<'HTML'
+              <!DOCTYPE html><html lang="de"><meta charset="utf-8">
+              <title>Kinoraum nicht verfuegbar</title>
+              <style>body{background:#07080c;color:#f2f4f8;font:26px/1.5 system-ui,sans-serif;
+              display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}
+              div{max-width:900px;padding:40px}h1{font-size:48px;margin:0 0 20px}
+              p{color:#a4adc2}</style>
+              <div><h1>Kinoraum konnte nicht geladen werden</h1>
+              <p>Der Server hat den Programmstand nicht von GitHub holen koennen.
+              Sobald GitHub wieder erreichbar ist, hilft ein Neustart:</p>
+              <p><code>kubectl -n kinoraum rollout restart deploy/kinoraum</code></p></div>
+              HTML
+              echo "unerreichbar" > /web/VERSION
+              exit 0
           volumeMounts:
             - name: web
               mountPath: /web
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           resources:
             requests: { cpu: 50m, memory: 64Mi }
             limits:   { cpu: 500m, memory: 256Mi }
@@ -109,7 +185,6 @@ spec:
             - name: conf
               mountPath: /etc/nginx/conf.d
               readOnly: true
-            # nginx:alpine will als Nicht-Root in diese Pfade schreiben
             - name: cache
               mountPath: /var/cache/nginx
             - name: run
@@ -126,13 +201,13 @@ spec:
             requests: { cpu: 20m, memory: 32Mi }
             limits:   { cpu: 300m, memory: 128Mi }
           securityContext:
-            runAsNonRoot: true
-            runAsUser: 101          # nginx-Benutzer im alpine-Abbild
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
       volumes:
         - name: web
+          emptyDir: {}
+        - name: tmp
           emptyDir: {}
         - name: conf
           configMap:
